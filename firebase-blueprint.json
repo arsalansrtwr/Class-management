@@ -1,0 +1,134 @@
+{
+  "entities": {
+    "TeacherProfile": {
+      "title": "TeacherProfile",
+      "description": "Professor profile with departmental affiliations and teaching subjects",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated user UID" },
+        "name": { "type": "string", "description": "Full name of the professor" },
+        "email": { "type": "string", "description": "Institutional email address" },
+        "primaryDepartment": { "type": "string", "description": "Primary department name" },
+        "subjects": { "type": "array", "description": "List of subjects taught" },
+        "departments": { "type": "array", "description": "List of departments attending classes" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp via serverTimestamp" }
+      },
+      "required": ["userId", "name", "primaryDepartment", "subjects", "departments", "createdAt"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "Course and section offering for a specific department",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner professor user ID" },
+        "courseCode": { "type": "string", "description": "Course code (e.g., CS-301)" },
+        "courseTitle": { "type": "string", "description": "Course title" },
+        "department": { "type": "string", "description": "Associated academic department" },
+        "section": { "type": "string", "description": "Section identifier (e.g., Section A)" },
+        "creditHours": { "type": "number", "description": "Credit hours (e.g. 3)" },
+        "semester": { "type": "string", "description": "Academic semester" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp" }
+      },
+      "required": ["userId", "courseCode", "courseTitle", "department", "section", "createdAt"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Student enrolled in a specific course section with cumulative metrics",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner professor user ID" },
+        "courseId": { "type": "string", "description": "ID of enrolled course" },
+        "department": { "type": "string", "description": "Student department" },
+        "section": { "type": "string", "description": "Enrolled section" },
+        "rollNumber": { "type": "string", "description": "Student registration/roll number" },
+        "name": { "type": "string", "description": "Student full name" },
+        "email": { "type": "string", "description": "Student contact email" },
+        "assignmentQuizTotal": { "type": "number", "description": "Assignment and quiz score (0-100)" },
+        "midtermScore": { "type": "number", "description": "Midterm exam score (0-100)" },
+        "finalTermScore": { "type": "number", "description": "Final term exam score (0-100)" },
+        "totalAttendanceCount": { "type": "number", "description": "Count of attended sessions" },
+        "totalAttendancePossible": { "type": "number", "description": "Total attendance sessions" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp" }
+      },
+      "required": ["userId", "courseId", "department", "section", "rollNumber", "name", "createdAt"]
+    },
+    "Assessment": {
+      "title": "Assessment",
+      "description": "Assignment, quiz, midterm, or final exam definition",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner professor user ID" },
+        "courseId": { "type": "string", "description": "Associated course ID" },
+        "title": { "type": "string", "description": "Title of assessment" },
+        "type": { "type": "string", "enum": ["ASSIGNMENT", "QUIZ", "MIDTERM", "FINAL"], "description": "Assessment type category" },
+        "maxMarks": { "type": "number", "description": "Total maximum possible marks" },
+        "weightPercentage": { "type": "number", "description": "Percentage weight allocated" },
+        "date": { "type": "string", "description": "Scheduled date or deadline" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp" }
+      },
+      "required": ["userId", "courseId", "title", "type", "maxMarks", "createdAt"]
+    },
+    "Score": {
+      "title": "Score",
+      "description": "Individual student score record on an assessment",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner professor user ID" },
+        "courseId": { "type": "string", "description": "Associated course ID" },
+        "studentId": { "type": "string", "description": "Student ID" },
+        "assessmentId": { "type": "string", "description": "Assessment ID" },
+        "obtainedMarks": { "type": "number", "description": "Marks obtained by the student" },
+        "submitted": { "type": "boolean", "description": "Whether submitted" },
+        "submissionNotes": { "type": "string", "description": "Notes or feedback" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp" }
+      },
+      "required": ["userId", "courseId", "studentId", "assessmentId", "obtainedMarks", "createdAt"]
+    },
+    "AttendanceRecord": {
+      "title": "AttendanceRecord",
+      "description": "Course attendance session record with student presence status",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner professor user ID" },
+        "courseId": { "type": "string", "description": "Associated course ID" },
+        "date": { "type": "string", "description": "Date of class session" },
+        "topic": { "type": "string", "description": "Lecture topic" },
+        "studentStatuses": { "type": "object", "description": "Map of studentId to status string" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp" }
+      },
+      "required": ["userId", "courseId", "date", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "entities/TeacherProfile" },
+      "description": "Professor teacher profile and department affiliations"
+    },
+    "/users/{userId}/courses/{courseId}": {
+      "schema": { "$ref": "entities/Course" },
+      "description": "Courses and sections taught by the professor"
+    },
+    "/users/{userId}/students/{studentId}": {
+      "schema": { "$ref": "entities/Student" },
+      "description": "Students enrolled in professor's sections"
+    },
+    "/users/{userId}/assessments/{assessmentId}": {
+      "schema": { "$ref": "entities/Assessment" },
+      "description": "Assignments, quizzes, midterms, and final exam records"
+    },
+    "/users/{userId}/scores/{scoreId}": {
+      "schema": { "$ref": "entities/Score" },
+      "description": "Individual student assessment scores and submission records"
+    },
+    "/users/{userId}/attendance_records/{attendanceId}": {
+      "schema": { "$ref": "entities/AttendanceRecord" },
+      "description": "Class session attendance entries"
+    }
+  }
+}

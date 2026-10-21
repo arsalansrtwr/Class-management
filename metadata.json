@@ -1,0 +1,6 @@
+{
+  "name": "ProfGrade",
+  "description": "Comprehensive academic grading, attendance, assignment, and exam record system with multi-department support, real-time sync, and administrative reports for professors.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

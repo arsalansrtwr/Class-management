@@ -1,0 +1,214 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all unknown paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTeacherProfile(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.primaryDepartment is string && data.primaryDepartment.size() > 0 && data.primaryDepartment.size() <= 100 &&
+             data.subjects is list && data.subjects.size() <= 50 &&
+             data.departments is list && data.departments.size() <= 50 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+             (!('updatedAt' in data) || data.updatedAt == null || data.updatedAt is timestamp);
+    }
+
+    function isValidCourse(data) {
+      return data.courseCode is string && data.courseCode.size() > 0 && data.courseCode.size() <= 30 &&
+             data.courseTitle is string && data.courseTitle.size() > 0 && data.courseTitle.size() <= 120 &&
+             data.department is string && data.department.size() > 0 && data.department.size() <= 80 &&
+             data.section is string && data.section.size() > 0 && data.section.size() <= 30 &&
+             (!('creditHours' in data) || data.creditHours is number) &&
+             (!('semester' in data) || (data.semester is string && data.semester.size() <= 50)) &&
+             (!('updatedAt' in data) || data.updatedAt == null || data.updatedAt is timestamp);
+    }
+
+    function isValidStudent(data) {
+      return data.courseId is string && data.courseId.size() > 0 && data.courseId.size() <= 128 &&
+             data.department is string && data.department.size() > 0 && data.department.size() <= 80 &&
+             data.section is string && data.section.size() > 0 && data.section.size() <= 30 &&
+             data.rollNumber is string && data.rollNumber.size() > 0 && data.rollNumber.size() <= 50 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+             (!('assignmentQuizTotal' in data) || data.assignmentQuizTotal is number) &&
+             (!('midtermScore' in data) || data.midtermScore is number) &&
+             (!('finalTermScore' in data) || data.finalTermScore is number) &&
+             (!('totalAttendanceCount' in data) || data.totalAttendanceCount is number) &&
+             (!('totalAttendancePossible' in data) || data.totalAttendancePossible is number) &&
+             (!('updatedAt' in data) || data.updatedAt == null || data.updatedAt is timestamp);
+    }
+
+    function isValidAssessment(data) {
+      return data.courseId is string && data.courseId.size() > 0 && data.courseId.size() <= 128 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 120 &&
+             data.type is string && (data.type == 'ASSIGNMENT' || data.type == 'QUIZ' || data.type == 'MIDTERM' || data.type == 'FINAL') &&
+             data.maxMarks is number && data.maxMarks > 0 &&
+             (!('weightPercentage' in data) || data.weightPercentage is number) &&
+             (!('date' in data) || (data.date is string && data.date.size() <= 50)) &&
+             (!('updatedAt' in data) || data.updatedAt == null || data.updatedAt is timestamp);
+    }
+
+    function isValidScore(data) {
+      return data.courseId is string && data.courseId.size() > 0 && data.courseId.size() <= 128 &&
+             data.studentId is string && data.studentId.size() > 0 && data.studentId.size() <= 128 &&
+             data.assessmentId is string && data.assessmentId.size() > 0 && data.assessmentId.size() <= 128 &&
+             data.obtainedMarks is number &&
+             (!('submitted' in data) || data.submitted is bool) &&
+             (!('submissionNotes' in data) || (data.submissionNotes is string && data.submissionNotes.size() <= 500)) &&
+             (!('updatedAt' in data) || data.updatedAt == null || data.updatedAt is timestamp);
+    }
+
+    function isValidAttendanceRecord(data) {
+      return data.courseId is string && data.courseId.size() > 0 && data.courseId.size() <= 128 &&
+             data.date is string && data.date.size() > 0 && data.date.size() <= 50 &&
+             (!('topic' in data) || (data.topic is string && data.topic.size() <= 200)) &&
+             (!('studentStatuses' in data) || data.studentStatuses is map) &&
+             (!('updatedAt' in data) || data.updatedAt == null || data.updatedAt is timestamp);
+    }
+
+    // Professor profile document
+    match /users/{userId} {
+      allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().keys().hasAll(['userId', 'name', 'primaryDepartment', 'subjects', 'departments', 'createdAt']) &&
+                       incoming().createdAt is timestamp &&
+                       incoming().createdAt <= request.time &&
+                       isValidTeacherProfile(incoming());
+
+      allow update: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidTeacherProfile(incoming());
+
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+
+      // Courses subcollection
+      match /courses/{courseId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll(['userId', 'courseCode', 'courseTitle', 'department', 'section', 'createdAt']) &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidCourse(incoming());
+
+        allow update: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidCourse(incoming());
+
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      // Students subcollection
+      match /students/{studentId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll(['userId', 'courseId', 'department', 'section', 'rollNumber', 'name', 'createdAt']) &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidStudent(incoming());
+
+        allow update: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidStudent(incoming());
+
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      // Assessments subcollection
+      match /assessments/{assessmentId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll(['userId', 'courseId', 'title', 'type', 'maxMarks', 'createdAt']) &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidAssessment(incoming());
+
+        allow update: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidAssessment(incoming());
+
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      // Scores subcollection
+      match /scores/{scoreId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll(['userId', 'courseId', 'studentId', 'assessmentId', 'obtainedMarks', 'createdAt']) &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidScore(incoming());
+
+        allow update: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidScore(incoming());
+
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      // Attendance records subcollection
+      match /attendance_records/{attendanceId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().keys().hasAll(['userId', 'courseId', 'date', 'createdAt']) &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidAttendanceRecord(incoming());
+
+        allow update: if isSignedIn() &&
+                         request.auth.uid == userId &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidAttendanceRecord(incoming());
+
+        allow delete: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+  }
+}
